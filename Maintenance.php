@@ -58,7 +58,7 @@ add_action('settings-website-extras', function() {
 <div class="section" id="maintenance">
   <p class="inline">
     <input type="checkbox" name="maintenance" value="1"<?php echo $dataw->maintenance == '1' ? ' checked="checked"' : ''; ?>>
-    <label for="maintenance"><strong>Включить техническое обслуживание</strong> - Страницы веб-сайта будут не доступны посетителям</label>
+    <label for="maintenance"><strong>Включить техническое обслуживание</strong> - Страницы веб-сайта будут недоступны для посетителей</label>
   </p>
 <?php
   if (is_readable(GSTHEMESPATH . $TEMPLATE . '/maintenance.php')) {
