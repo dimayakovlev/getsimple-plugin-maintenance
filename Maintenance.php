@@ -21,7 +21,13 @@ register_plugin(
 );
 
 add_action('index-pretemplate', function() {
-  global $dataw;
+  global $DY_MAINTENANCE_GLOBAL_SETTINGS;
+  if (!empty($DY_MAINTENANCE_GLOBAL_SETTINGS)) {
+    global $dataw;
+  } else {
+    $dataw = getXML(GSDATAOTHERPATH . 'maintenance.xml');
+    if (!$dataw) return;
+  }    
   global $TEMPLATE;
   global $USR;
   
@@ -40,7 +46,7 @@ add_action('index-pretemplate', function() {
   </head>
   <body>
     <?php
-      get_maintenance_message();
+      echo strip_decode($dataw->maintenance_message);
       if (function_exists('dyYandexMetrika')) echo dyYandexMetrika();
     ?>
   </body>
@@ -52,8 +58,15 @@ add_action('index-pretemplate', function() {
 });
 
 add_action('settings-website-extras', function() {
+  global $DY_MAINTENANCE_GLOBAL_SETTINGS;
+  if (!empty($DY_MAINTENANCE_GLOBAL_SETTINGS)) {
+    $dataw = getXML(GSDATAOTHERPATH . 'website.xml');
+  } else {
+    $dataw = getXML(GSDATAOTHERPATH . 'maintenance.xml');
+    echo PHP_EOL . '<!-- Settings are stored in the maintenance.xml -->' . PHP_EOL;
+  }   
+  if (!$dataw) $dataw = new SimpleXMLExtended('<item></item>');
   global $TEMPLATE;
-  $dataw = getXML(GSDATAOTHERPATH . 'website.xml');
 ?>
 <div class="section" id="maintenance">
   <p class="inline">
@@ -72,7 +85,7 @@ add_action('settings-website-extras', function() {
 ?>
   <p>
     <label for="maintenance_message">Текст сообщения для посетителей:</label>
-    <textarea name="maintenance_message" class="text short charlimit" style="height: 62px;"<?php if ($dataw->maintenance == '1') echo ' required';?>><?php get_maintenance_message(); ?></textarea>
+    <textarea name="maintenance_message" class="text short charlimit" style="height: 62px;"<?php if ($dataw->maintenance == '1') echo ' required';?>><?php echo strip_decode($dataw->maintenance_message); ?></textarea>
   </p>
 </div>
 <script>
@@ -86,12 +99,21 @@ add_action('settings-website-extras', function() {
 });
 
 add_action('settings-website', function () {
-  global $xmls;
+  global $DY_MAINTENANCE_GLOBAL_SETTINGS;
+  if (!empty($DY_MAINTENANCE_GLOBAL_SETTINGS)) {
+    global $xmls;
+  } else {
+    $xmls = new SimpleXMLExtended('<item></item>');
+  }
   
   $xmls->addChild('maintenance', isset($_POST['maintenance']));
   $xmls->addChild('maintenance_ignore_template', isset($_POST['maintenance_ignore_template']));
   $xmls->addChild('maintenance_message')->addCData(isset($_POST['maintenance_message']) ? safe_slash_html($_POST['maintenance_message']) : '');
   
+  if (empty($DY_MAINTENANCE_GLOBAL_SETTINGS)) {
+    XMLsave($xmls, GSDATAOTHERPATH . 'maintenance.xml');
+  }
+   
 });
 
 /**
@@ -100,8 +122,13 @@ add_action('settings-website', function () {
  * This will echo or return the website maintenance message
  */
 function get_maintenance_message($echo = true) {
-  global $dataw;
- 
+  global $DY_MAINTENANCE_GLOBAL_SETTINGS;
+  if (!empty($DY_MAINTENANCE_GLOBAL_SETTINGS)) {
+    global $dataw;
+  } else {
+    $dataw = getXML(GSDATAOTHERPATH . 'maintenance.xml');
+  }
+  if (!$dataw) return;
   if ($echo) {
     echo strip_decode($dataw->maintenance_message);
   } else {
