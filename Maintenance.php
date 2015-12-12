@@ -29,14 +29,9 @@ add_action('index-pretemplate', function() {
     if (!$dataw) return;
   }    
   global $TEMPLATE;
+  global $USR;
   
-  if ($dataw->maintenance == '1' && $dataw->maintenance_registered_users == '1') {
-    global $USR;
-  } else {
-    $USR = null;
-  }  
-  
-  if ($dataw->maintenance == '1' && $USR == null) {
+  if ($dataw->maintenance == '1' && ($USR == null || $dataw->maintenance_registered_users == '1')) {
     $protocol = ('HTTP/1.1' == $_SERVER['SERVER_PROTOCOL']) ? 'HTTP/1.1' : 'HTTP/1.0';
     header($protocol . ' 503 Service Unavailable', true, 503);
     header('Retry-After: 3600');
