@@ -29,7 +29,12 @@ add_action('index-pretemplate', function() {
     if (!$dataw) return;
   }    
   global $TEMPLATE;
-  global $USR;
+  
+  if ($dataw->maintenance == '1' && $dataw->maintenance_registered_users == '1') {
+    global $USR;
+  } else {
+    $USR = null;
+  }  
   
   if ($dataw->maintenance == '1' && $USR == null) {
     $protocol = ('HTTP/1.1' == $_SERVER['SERVER_PROTOCOL']) ? 'HTTP/1.1' : 'HTTP/1.0';
@@ -65,13 +70,17 @@ add_action('settings-website-extras', function() {
     $dataw = getXML(GSDATAOTHERPATH . 'maintenance.xml');
     echo PHP_EOL . '<!-- Settings are stored in the maintenance.xml -->' . PHP_EOL;
   }   
-  if (!$dataw) $dataw = new SimpleXMLExtended('<item></item>');
+  if (!$dataw) $dataw = new SimpleXMLExtended('<?xml version="1.0" encoding="UTF-8"?><item></item>');
   global $TEMPLATE;
 ?>
 <div class="section" id="maintenance">
   <p class="inline">
     <input type="checkbox" name="maintenance" value="1"<?php echo $dataw->maintenance == '1' ? ' checked="checked"' : ''; ?>>
     <label for="maintenance"><strong>Включить техническое обслуживание</strong> - Страницы веб-сайта будут недоступны для посетителей</label>
+  </p>
+  <p class="inline">
+    <input type="checkbox" name="maintenance_registered_users" value="1"<?php echo $dataw->maintenance_registered_users == '1' ? ' checked="checked"' : ''; ?>>
+    <label for="maintenance_registered_users">Показывать страницы в обычном режиме для зарегистрированных пользователей</label>
   </p>
 <?php
   if (is_readable(GSTHEMESPATH . $TEMPLATE . '/maintenance.php')) {
@@ -103,10 +112,11 @@ add_action('settings-website', function () {
   if (!empty($DY_MAINTENANCE_GLOBAL_SETTINGS)) {
     global $xmls;
   } else {
-    $xmls = new SimpleXMLExtended('<item></item>');
+    $xmls = new SimpleXMLExtended('<?xml version="1.0" encoding="UTF-8"?><item></item>');
   }
   
   $xmls->addChild('maintenance', isset($_POST['maintenance']));
+  $xmls->addChild('maintenance_registered_users', isset($_POST['maintenance_registered_users']));
   $xmls->addChild('maintenance_ignore_template', isset($_POST['maintenance_ignore_template']));
   $xmls->addChild('maintenance_message')->addCData(isset($_POST['maintenance_message']) ? safe_slash_html($_POST['maintenance_message']) : '');
   
