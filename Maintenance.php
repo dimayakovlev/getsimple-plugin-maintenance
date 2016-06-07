@@ -9,33 +9,37 @@ Author URI: http://dimayakovlev.ru/
 
 $thisfile = basename(__FILE__, '.php');
 
+if (!is_frontend()) i18n_merge($thisfile) || i18n_merge($thisfile, 'en_US');
+
 register_plugin(
   $thisfile,
-  'Maintenance',
+  i18n_r($thisfile.'/TITLE'),
   '1.0',
-  'Dmitry Yakovlev',
+  i18n_r($thisfile.'/AUTHOR'),
   'http://dimayakovlev.ru',
-  'Включение режима технического обслуживание веб-сайта',
+  i18n_r($thisfile.'/DESCRIPTION'),
   '',
   ''
 );
-
+/*
+add_action('index-post-dataindex', function() {
+  global $dataw;
+  if ($dataw->maintenanceEnabled == '1') {
+    // Отключения кэширования с использованием плагина Cache
+    if (function_exists('isCache')) {
+      if (isCache()) disableCache();
+    }
+  }
+});
+*/
 add_action('index-pretemplate', function() {
-  global $DY_MAINTENANCE_GLOBAL_SETTINGS;
-  if (!empty($DY_MAINTENANCE_GLOBAL_SETTINGS)) {
-    global $dataw;
-  } else {
-    $dataw = getXML(GSDATAOTHERPATH . 'maintenance.xml');
-    if (!$dataw) return;
-  }    
-  global $TEMPLATE;
-  global $USR;
+  global $dataw, $TEMPLATE;
   
-  if ($dataw->maintenance == '1' && ($USR == null || $dataw->maintenance_registered_users != '1')) {
+  if ($dataw->maintenanceEnabled == '1' && (!is_logged_in() || $dataw->maintenanceRegisteredUsers != '1')) {
     $protocol = ('HTTP/1.1' == $_SERVER['SERVER_PROTOCOL']) ? 'HTTP/1.1' : 'HTTP/1.0';
     header($protocol . ' 503 Service Unavailable', true, 503);
     header('Retry-After: 3600');
-    if ($dataw->maintenance_ignore_template != '1' && is_readable($maintenance_template = GSTHEMESPATH . $TEMPLATE . '/maintenance.php')) {
+    if ($dataw->maintenanceUseTemplate == '1' && is_readable($maintenance_template = GSTHEMESPATH . $TEMPLATE . '/maintenance.php')) {
       include_once $maintenance_template;
     } else {
 ?><!DOCTYPE html>
@@ -46,79 +50,80 @@ add_action('index-pretemplate', function() {
   </head>
   <body>
     <?php
-      echo strip_decode($dataw->maintenance_message);
-      if (function_exists('dyYandexMetrika')) echo dyYandexMetrika();
+      get_maintenance_message(true);
+      #if (function_exists('getYandexMetrika')) getYandexMetrika();
     ?>
   </body>
 </html>
 <?php
     }
-    die; 
+    die;
   }
 });
 
 add_action('settings-website-extras', function() {
-  global $DY_MAINTENANCE_GLOBAL_SETTINGS;
-  if (!empty($DY_MAINTENANCE_GLOBAL_SETTINGS)) {
+  global $TEMPLATE;
+  $thisfile = basename(__FILE__, '.php');
+  # Temporary solution
+  if(isset($_POST['submitted'])) {
+    i18n_merge($thisfile) || i18n_merge($thisfile, 'en_US');
     $dataw = getXML(GSDATAOTHERPATH . 'website.xml');
   } else {
-    $dataw = getXML(GSDATAOTHERPATH . 'maintenance.xml');
-    echo PHP_EOL . '<!-- Settings are stored in the maintenance.xml -->' . PHP_EOL;
-  }   
-  if (!$dataw) $dataw = new SimpleXMLExtended('<?xml version="1.0" encoding="UTF-8"?><item></item>');
-  global $TEMPLATE;
+    global $dataw;
+  }
+  #
+  $maintenance_enabled = !empty($dataw->maintenanceEnabled) ? ' checked' : '';
+  $maintenance_registered_users = !empty($dataw->maintenanceRegisteredUsers) ? ' checked' : '';
 ?>
 <div class="section" id="maintenance">
   <p class="inline">
-    <input type="checkbox" name="maintenance" value="1"<?php echo $dataw->maintenance == '1' ? ' checked="checked"' : ''; ?>>
-    <label for="maintenance"><strong>Включить техническое обслуживание</strong> - Страницы веб-сайта будут недоступны для посетителей</label>
+    <input type="checkbox" name="maintenanceEnabled" value="1"<?php echo $maintenance_enabled; ?>>
+    <label for="maintenanceEnabled"><strong><?php i18n($thisfile.'/ENABLE_MAINTENANCE'); ?></strong> - <?php i18n($thisfile.'/ENABLE_MAINTENANCE_LABEL'); ?></label>
   </p>
   <p class="inline">
-    <input type="checkbox" name="maintenance_registered_users" value="1"<?php echo $dataw->maintenance_registered_users == '1' ? ' checked="checked"' : ''; ?>>
-    <label for="maintenance_registered_users">Показывать страницы в обычном режиме для зарегистрированных пользователей</label>
+    <input type="checkbox" name="maintenanceRegisteredUsers" value="1"<?php echo $maintenance_registered_users; ?>>
+    <label for="maintenanceRegisteredUsers"><?php i18n($thisfile.'/IGNORE_MAINTENANCE'); ?></label>
   </p>
 <?php
   if (is_readable(GSTHEMESPATH . $TEMPLATE . '/maintenance.php')) {
+    $maintenance_use_template = !empty($dataw->maintenanceUseTemplate) ? ' checked' : '';
 ?>
   <p class="inline">
-    <input type="checkbox" name="maintenance_ignore_template" value="1"<?php echo $dataw->maintenance_ignore_template == '1' ? ' checked="checked"' : ''; ?>>
-    <label for="maintenance_ignore_template">Не использовать шаблон <em>maintenance.php</em> темы оформления</label>
+    <input type="checkbox" name="maintenanceUseTemplate" value="1"<?php echo $maintenance_use_template; ?>>
+    <label for="maintenanceUseTemplate"><?php i18n($thisfile.'/USE_TEMPLATE'); ?></label>
   </p>
 <?php
   }
 ?>
   <p>
-    <label for="maintenance_message">Текст сообщения для посетителей:</label>
-    <textarea name="maintenance_message" class="text short charlimit" style="height: 62px;"<?php if ($dataw->maintenance == '1') echo ' required';?>><?php echo strip_decode($dataw->maintenance_message); ?></textarea>
+    <label for="maintenanceMessage"><?php i18n($thisfile.'/MESSAGE_LABEL'); ?>:</label>
+    <textarea name="maintenanceMessage" class="text short charlimit" style="height: 62px;"<?php if ($maintenance_enabled) echo ' required';?>><?php echo strip_decode($dataw->maintenanceMessage); ?></textarea>
   </p>
 </div>
 <script>
   $(document).ready(function() {
-    $('input[name="maintenance"]').click(function() {
-      $('textarea[name="maintenance_message"]').prop('required', $(this).prop('checked'));
+    $('input[name="maintenanceEnabled"]').click(function() {
+      $('textarea[name="maintenanceMessage"]').prop('required', $(this).prop('checked'));
     });
+<?php
+  if ($maintenance_enabled) {
+?>
+    $('.bodycontent').before('<div class="notify maintenance-notification" style="display:block;"><?php echo sprintf(i18n_r($thisfile.'/MAINTENANCE_WARNING'), myself(false).'#maintenance'); ?></div>');
+    $('.maintenance-notification').fadeOut(500).fadeIn(500);
+<?php
+  }
+?>
   });
 </script>
 <?php
 });
 
 add_action('settings-website', function () {
-  global $DY_MAINTENANCE_GLOBAL_SETTINGS;
-  if (!empty($DY_MAINTENANCE_GLOBAL_SETTINGS)) {
-    global $xmls;
-  } else {
-    $xmls = new SimpleXMLExtended('<?xml version="1.0" encoding="UTF-8"?><item></item>');
-  }
-  
-  $xmls->addChild('maintenance', isset($_POST['maintenance']));
-  $xmls->addChild('maintenance_registered_users', isset($_POST['maintenance_registered_users']));
-  $xmls->addChild('maintenance_ignore_template', isset($_POST['maintenance_ignore_template']));
-  $xmls->addChild('maintenance_message')->addCData(isset($_POST['maintenance_message']) ? safe_slash_html($_POST['maintenance_message']) : '');
-  
-  if (empty($DY_MAINTENANCE_GLOBAL_SETTINGS)) {
-    XMLsave($xmls, GSDATAOTHERPATH . 'maintenance.xml');
-  }
-   
+  global $xmls;
+  $xmls->addChild('maintenanceEnabled', isset($_POST['maintenanceEnabled']));
+  $xmls->addChild('maintenanceRegisteredUsers', isset($_POST['maintenanceRegisteredUsers']));
+  $xmls->addChild('maintenanceUseTemplate', isset($_POST['maintenanceUseTemplate']));
+  $xmls->addChild('maintenanceMessage')->addCData(isset($_POST['maintenanceMessage']) ? safe_slash_html($_POST['maintenanceMessage']) : '');
 });
 
 /**
@@ -127,16 +132,19 @@ add_action('settings-website', function () {
  * This will echo or return the website maintenance message
  */
 function get_maintenance_message($echo = true) {
-  global $DY_MAINTENANCE_GLOBAL_SETTINGS;
-  if (!empty($DY_MAINTENANCE_GLOBAL_SETTINGS)) {
-    global $dataw;
-  } else {
-    $dataw = getXML(GSDATAOTHERPATH . 'maintenance.xml');
-  }
-  if (!$dataw) return;
+  global $dataw;
   if ($echo) {
-    echo strip_decode($dataw->maintenance_message);
+    echo strip_decode($dataw->maintenanceMessage);
   } else {
-    return strip_decode($dataw->maintenance_message);
+    return strip_decode($dataw->maintenanceMessage);
+  }
+}
+
+function isMaintenance() {
+  global $dataw;
+  if ($dataw->maintenanceEnabled == '1') {
+    return true;
+  } else {
+    return false;
   }
 }
