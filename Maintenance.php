@@ -76,6 +76,7 @@ add_action('settings-website-extras', function() {
   $maintenance_registered_users = !empty($dataw->maintenanceRegisteredUsers) ? ' checked' : '';
 ?>
 <div class="section" id="maintenance">
+  <h3><?php i18n($thisfile.'/TITLE'); ?></h3>
   <p class="inline">
     <input type="checkbox" name="maintenanceEnabled" value="1"<?php echo $maintenance_enabled; ?>>
     <label for="maintenanceEnabled"><strong><?php i18n($thisfile.'/ENABLE_MAINTENANCE'); ?></strong> - <?php i18n($thisfile.'/ENABLE_MAINTENANCE_LABEL'); ?></label>
