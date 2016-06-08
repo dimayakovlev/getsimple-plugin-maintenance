@@ -34,7 +34,6 @@ add_action('index-post-dataindex', function() {
 */
 add_action('index-pretemplate', function() {
   global $dataw, $TEMPLATE;
-  
   if ($dataw->maintenanceEnabled == '1' && (!is_logged_in() || $dataw->maintenanceRegisteredUsers != '1')) {
     $protocol = ('HTTP/1.1' == $_SERVER['SERVER_PROTOCOL']) ? 'HTTP/1.1' : 'HTTP/1.0';
     header($protocol . ' 503 Service Unavailable', true, 503);
@@ -117,6 +116,9 @@ add_action('settings-website-extras', function() {
   });
 </script>
 <?php
+  add_action('settings-sidebar', function() use ($thisfile) {
+    echo '<li><a href="'.myself(false).'#maintenance">'.i18n_r($thisfile.'/TITLE').'</a></li>'.PHP_EOL;
+  });
 });
 
 add_action('settings-website', function () {
@@ -129,7 +131,7 @@ add_action('settings-website', function () {
 
 /**
  * Get Maintenance Message
- * 
+ *
  * This will echo or return the website maintenance message
  */
 function get_maintenance_message($echo = true) {
